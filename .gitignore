@@ -1,0 +1,12 @@
+node_modules
+dist
+
+# Henkilökohtainen data: varmuuskopiot eivät kuulu julkiseen repoon
+treenit-*.json
+varmuuskopio*.json
+backups/
+
+# Paikalliset muistiinpanot ja Clauden asetukset
+CLAUDE.md
+keskustelu-*.md
+.claude/
