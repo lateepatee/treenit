@@ -1,10 +1,12 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { TimeChart } from '../components/TimeChart';
 import { Delta, StatTile, WeekProgress } from '../components/ui';
 import type { Draft } from '../draft';
+import { backupReminder, exportBackup } from '../backup';
+import { workoutProgress } from '../progress';
 import { recentPRs, weeklyAverages, weightRows } from '../stats';
 import { useStore } from '../store';
-import { draftFromTemplate, nextTemplate, TEMPLATES, WEEKLY_TARGET } from '../templates';
+import { draftFromTemplate, nextTemplate, WEEKLY_TARGET } from '../templates';
 import { useChartColors } from '../theme';
 import { addDays, fmtDate, fmtNum, isoWeek, summarizeSets, todayISO, weekStart } from '../utils';
 
@@ -24,26 +26,37 @@ export function Home({ onNewWorkout, onOpenWorkout, onOpenExercise, onGo }: Prop
   const weights = useMemo(() => weightRows(data.bodyWeights), [data.bodyWeights]);
   const prs = useMemo(() => recentPRs(data, addDays(today, -30)), [data, today]);
   const next = nextTemplate(data);
+  const [reminder, setReminder] = useState(() => backupReminder(data));
 
-  const startCard = (
+  const handleBackup = async () => {
+    try {
+      if (await exportBackup(data)) setReminder(null);
+    } catch {
+      alert('Varmuuskopion tallennus epäonnistui. Kokeile Tiedot-välilehdeltä.');
+    }
+  };
+
+  const nameOf = (id: string) => data.exercises.find((e) => e.id === id)?.name ?? '?';
+
+  const startCard = next && (
     <section className="hero">
       <div className="hero-head">
         <div>
           <div className="hero-label">Seuraavaksi vuorossa</div>
-          <div className="hero-title">{next.label}</div>
+          <div className="hero-title">{next.name}</div>
         </div>
         <img className="hero-logo" src="icon.svg" alt="" />
       </div>
-      <p className="hero-exercises">{next.exercises.join(' · ')}</p>
+      <p className="hero-exercises">{next.exerciseIds.map(nameOf).join(' · ')}</p>
       <div className="hero-buttons">
-        {TEMPLATES.map((t) => (
+        {data.templates.map((t) => (
           <button
-            key={t.name}
+            key={t.id}
             type="button"
             className={t === next ? 'btn hero-primary' : 'btn hero-ghost'}
-            onClick={() => onNewWorkout(draftFromTemplate(t))}
+            onClick={() => onNewWorkout(draftFromTemplate(t, data))}
           >
-            {t.label}
+            {t.name}
           </button>
         ))}
       </div>
@@ -88,10 +101,13 @@ export function Home({ onNewWorkout, onOpenWorkout, onOpenExercise, onGo }: Prop
   const week = weeklyAverages(data.bodyWeights)[0];
   const monday = weekStart(today);
   const thisWeek = data.workouts.filter((w) => w.date >= monday && w.date <= addDays(monday, 6)).length;
-  const thisMonth = data.workouts.filter((w) => w.date.slice(0, 7) === today.slice(0, 7)).length;
-  const recentWorkouts = [...data.workouts].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 3);
+  const recentWorkouts = [...data.workouts]
+    .reverse()
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, 3);
+  const lastWorkout = recentWorkouts[0];
+  const lastProgress = lastWorkout ? workoutProgress(data, lastWorkout) : null;
   const weights90 = weights.filter((w) => w.date >= addDays(today, -90));
-  const nameOf = (id: string) => data.exercises.find((e) => e.id === id)?.name ?? '?';
 
   return (
     <div>
@@ -104,6 +120,17 @@ export function Home({ onNewWorkout, onOpenWorkout, onOpenExercise, onGo }: Prop
           + Tyhjä treeni
         </button>
       </div>
+
+      {reminder && (
+        <div className="card banner">
+          <span>
+            {reminder} Tiedot ovat vain tässä puhelimessa.
+          </span>
+          <button type="button" className="btn primary small" onClick={handleBackup}>
+            Ota varmuuskopio
+          </button>
+        </div>
+      )}
 
       {startCard}
 
@@ -139,7 +166,29 @@ export function Home({ onNewWorkout, onOpenWorkout, onOpenExercise, onGo }: Prop
             </>
           }
         />
-        <StatTile label="Treenit tässä kuussa" value={String(thisMonth)} />
+        <StatTile
+          label="Edellinen treeni"
+          value={
+            lastProgress && lastProgress.compared > 0 ? (
+              <>
+                <span className={lastProgress.up > 0 ? 'delta-good' : undefined}>
+                  <span aria-hidden="true">▲ </span>
+                  {lastProgress.up}
+                </span>
+                <span className="tile-unit"> / {lastProgress.compared} liikettä</span>
+              </>
+            ) : (
+              '–'
+            )
+          }
+          sub={
+            !lastWorkout
+              ? 'Ei treenejä'
+              : lastProgress && lastProgress.compared > 0
+                ? `${lastWorkout.name || 'Treeni'} · ${fmtDate(lastWorkout.date, { year: false })}`
+                : 'Ei vielä vertailtavaa'
+          }
+        />
         <StatTile label="Ennätykset 30 pv" value={String(prs.length)} />
       </div>
 

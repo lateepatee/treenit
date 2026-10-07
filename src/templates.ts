@@ -1,20 +1,12 @@
 import { emptySet, type Draft } from './draft';
-import type { AppData } from './types';
+import type { AppData, StoredData, Template } from './types';
 import { todayISO, uid } from './utils';
 
-export interface Template {
-  /** Treenin nimi tallennettaessa; vuorottelu tunnistaa pohjan tästä */
-  name: string;
-  /** Napin teksti */
-  label: string;
-  exercises: string[];
-}
-
-/** Ylä/ala-jako, joka tehdään vuorotellen. Jokaisessa liikkeessä kaksi työsarjaa. */
-export const TEMPLATES: Template[] = [
+/** Ylä/ala-jako, joka tehdään vuorotellen. Käytetään, kun tallennetuissa tiedoissa ei vielä ole pohjia. */
+const DEFAULT_TEMPLATES: { name: string; legacyName: string; exercises: string[] }[] = [
   {
-    name: 'Ylä',
-    label: 'Yläpäivä',
+    name: 'Yläpäivä',
+    legacyName: 'ylä',
     exercises: [
       'Vinopenkki smithissä',
       'Selkäliike laitteessa',
@@ -27,38 +19,69 @@ export const TEMPLATES: Template[] = [
     ],
   },
   {
-    name: 'Ala',
-    label: 'Alapäivä',
+    name: 'Alapäivä',
+    legacyName: 'ala',
     exercises: ['Hack-kyykky', 'RDL', 'Reidenojennus', 'Reidenkoukistus', 'Vatsat', 'Pohkeet'],
   },
 ];
 
+/** Jokaisessa liikkeessä kaksi työsarjaa. */
 export const WORK_SETS = 2;
 
 /** Treenejä viikossa (ylä, ala, ylä, ala). */
 export const WEEKLY_TARGET = 4;
 
-export function draftFromTemplate(t: Template): Draft {
+/**
+ * Lisää oletuspohjat tietoihin, joista ne puuttuvat. Ennen pohjia tallennetut "Ylä"/"Ala"-treenit
+ * liitetään pohjiin ja nimetään pohjan mukaan, jotta vuorottelu ja historia jatkuvat.
+ */
+export function migrate(d: StoredData): AppData {
+  if (d.templates) return d as AppData;
+  const exercises = [...d.exercises];
+  const idFor = (name: string) => {
+    const found = exercises.find((e) => e.name.toLowerCase() === name.toLowerCase());
+    if (found) return found.id;
+    const created = { id: uid(), name };
+    exercises.push(created);
+    return created.id;
+  };
+  const templates: Template[] = DEFAULT_TEMPLATES.map((t) => ({
+    id: uid(),
+    name: t.name,
+    exerciseIds: t.exercises.map(idFor),
+  }));
+  const workouts = d.workouts.map((w) => {
+    const i = DEFAULT_TEMPLATES.findIndex((t) => t.legacyName === w.name.trim().toLowerCase());
+    return i >= 0 && !w.templateId ? { ...w, name: templates[i].name, templateId: templates[i].id } : w;
+  });
+  return { ...d, exercises, workouts, templates };
+}
+
+export function draftFromTemplate(t: Template, data: AppData): Draft {
+  const nameOf = (id: string) => data.exercises.find((e) => e.id === id)?.name ?? '';
   return {
     workoutId: null,
+    templateId: t.id,
     date: todayISO(),
     name: t.name,
     notes: '',
-    exercises: t.exercises.map((name) => ({
+    exercises: t.exerciseIds.map((id) => ({
       id: uid(),
-      name,
+      name: nameOf(id),
       sets: Array.from({ length: WORK_SETS }, emptySet),
     })),
   };
 }
 
-/** Seuraavaksi vuorossa oleva pohja: se, jota ei tehty viimeksi. */
-export function nextTemplate(data: AppData): Template {
-  const byName = (name: string) => TEMPLATES.find((t) => t.name.toLowerCase() === name.trim().toLowerCase());
-  const last = [...data.workouts]
+/** Seuraavaksi vuorossa oleva pohja: viimeksi tehtyä pohjaa seuraava. */
+export function nextTemplate(data: AppData): Template | null {
+  const { templates } = data;
+  if (templates.length === 0) return null;
+  // Uusin ensin; saman päivän treeneistä myöhemmin tallennettu ensin.
+  const latest = [...data.workouts]
+    .reverse()
     .sort((a, b) => b.date.localeCompare(a.date))
-    .map((w) => byName(w.name))
-    .find((t) => t !== undefined);
-  if (!last) return TEMPLATES[0];
-  return TEMPLATES[(TEMPLATES.indexOf(last) + 1) % TEMPLATES.length];
+    .map((w) => templates.findIndex((t) => t.id === w.templateId))
+    .find((i) => i >= 0);
+  return latest === undefined ? templates[0] : templates[(latest + 1) % templates.length];
 }

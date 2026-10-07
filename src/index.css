@@ -610,6 +610,7 @@ td .delta {
   color: var(--ink);
 }
 
+.tile-value .delta-good,
 .delta.delta-good,
 .tile-value .delta.delta-good {
   color: var(--good);
@@ -923,6 +924,66 @@ td .icon-btn {
   font-size: 0.875rem;
   font-style: italic;
   color: var(--muted);
+}
+
+.program-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.program-card p {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.program-list {
+  list-style: none;
+  margin: 12px 0;
+  padding: 0;
+}
+
+.program-row {
+  display: grid;
+  grid-template-columns: 24px 1fr 36px 36px;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.icon-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 12px);
+  transform: translateX(-50%);
+  z-index: 20;
+  width: min(440px, calc(100vw - 32px));
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--brand-grad);
+  color: var(--on-brand);
+  font-weight: 600;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  animation: toast-in 0.25s ease-out;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 12px);
+  }
+}
+
+@media (min-width: 760px) {
+  .toast {
+    bottom: 24px;
+  }
 }
 
 .editor-footer {

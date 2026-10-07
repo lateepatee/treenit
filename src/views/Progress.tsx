@@ -20,6 +20,20 @@ export function Progress({ exerciseId, onSelectExercise }: Props) {
   const exercises = useMemo(() => usedExercises(data), [data]);
   const selected = exercises.find((e) => e.id === exerciseId) ?? exercises[0];
 
+  // Liikkeet pohjittain ohjelman järjestyksessä; pohjiin kuulumattomat lopuksi.
+  const groups = useMemo(() => {
+    const seen = new Set<string>();
+    const result = data.templates.map((t) => {
+      const items = t.exerciseIds
+        .map((id) => exercises.find((e) => e.id === id))
+        .filter((e): e is (typeof exercises)[number] => !!e && !seen.has(e.id));
+      items.forEach((e) => seen.add(e.id));
+      return { label: t.name, items };
+    });
+    result.push({ label: 'Muut', items: exercises.filter((e) => !seen.has(e.id)) });
+    return result.filter((g) => g.items.length > 0);
+  }, [data.templates, exercises]);
+
   const [range, setRange] = useState<RangeKey>('6m');
   const [metricChoice, setMetricChoice] = useState<MetricKey>('e1rm');
 
@@ -72,10 +86,14 @@ export function Progress({ exerciseId, onSelectExercise }: Props) {
           <label className="field grow">
             <span>Liike</span>
             <select value={selected.id} onChange={(e) => onSelectExercise(e.target.value)}>
-              {exercises.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.name} ({e.sessions})
-                </option>
+              {groups.map((g) => (
+                <optgroup key={g.label} label={g.label}>
+                  {g.items.map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.name} ({e.sessions})
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </select>
           </label>

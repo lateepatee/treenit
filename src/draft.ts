@@ -17,6 +17,8 @@ export interface DraftExercise {
 export interface Draft {
   /** null = uusi treeni */
   workoutId: string | null;
+  /** Pohja, josta treeni aloitettiin */
+  templateId?: string;
   date: string;
   name: string;
   notes: string;
@@ -41,6 +43,7 @@ export function draftFromWorkout(w: Workout, data: AppData, asNew: boolean): Dra
   const nameOf = (id: string) => data.exercises.find((e) => e.id === id)?.name ?? '';
   return {
     workoutId: asNew ? null : w.id,
+    templateId: w.templateId,
     date: asNew ? todayISO() : w.date,
     name: w.name,
     notes: asNew ? '' : w.notes,

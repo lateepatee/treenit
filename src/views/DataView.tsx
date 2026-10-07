@@ -1,20 +1,21 @@
-import type { ChangeEvent } from 'react';
+import { useState, type ChangeEvent } from 'react';
+import { exportBackup, lastBackupDate } from '../backup';
 import { clearDraft } from '../draft';
-import { emptyData, isAppData, useStore } from '../store';
-import { todayISO } from '../utils';
+import { emptyData, isStoredData, useStore } from '../store';
+import { fmtDate } from '../utils';
 
 export function DataView() {
   const { data, replaceData } = useStore();
   const isEmpty = data.workouts.length === 0 && data.bodyWeights.length === 0;
 
-  const handleExport = () => {
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `treenit-${todayISO()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const [lastBackup, setLastBackup] = useState(lastBackupDate);
+
+  const handleExport = async () => {
+    try {
+      if (await exportBackup(data)) setLastBackup(lastBackupDate());
+    } catch {
+      alert('Varmuuskopion tallennus epäonnistui.');
+    }
   };
 
   const handleImport = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -23,7 +24,7 @@ export function DataView() {
     if (!file) return;
     try {
       const parsed: unknown = JSON.parse(await file.text());
-      if (!isAppData(parsed)) throw new Error('väärä muoto');
+      if (!isStoredData(parsed)) throw new Error('väärä muoto');
       if (!isEmpty && !confirm('Tuonti korvaa kaikki nykyiset tiedot. Jatketaanko?')) return;
       replaceData(parsed);
       alert(`Tuotu ${parsed.workouts.length} treeniä ja ${parsed.bodyWeights.length} punnitusta.`);
@@ -35,7 +36,9 @@ export function DataView() {
   const handleClear = () => {
     if (!confirm('Poistetaanko KAIKKI treenit ja punnitukset pysyvästi? Ota ensin varmuuskopio.')) return;
     clearDraft();
-    replaceData(emptyData());
+    // Treeniohjelma säilyy, vain kirjaukset poistetaan.
+    const kept = new Set(data.templates.flatMap((t) => t.exerciseIds));
+    replaceData({ ...emptyData(), exercises: data.exercises.filter((e) => kept.has(e.id)), templates: data.templates });
   };
 
   return (
@@ -52,7 +55,10 @@ export function DataView() {
         </p>
         <p className="muted">
           Nyt tallessa: {data.workouts.length} treeniä, {data.exercises.length} liikettä, {data.bodyWeights.length}{' '}
-          punnitusta.
+          punnitusta. Viimeisin varmuuskopio: {lastBackup ? fmtDate(lastBackup) : 'ei vielä otettu'}.
+        </p>
+        <p className="hint">
+          iPhonessa varmuuskopio avautuu jakovalikkoon: valitse “Tallenna Tiedostoihin” ja esim. iCloud Drive.
         </p>
         <div className="row-gap wrap">
           <button type="button" className="btn primary" onClick={handleExport}>

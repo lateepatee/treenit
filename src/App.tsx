@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { clearDraft, draftFromWorkout, loadDraft, type Draft } from './draft';
 import { useStore } from './store';
 import { DataView } from './views/DataView';
 import { Home } from './views/Home';
+import { ProgramEditor } from './views/ProgramEditor';
 import { Progress } from './views/Progress';
 import { Weight } from './views/Weight';
 import { WorkoutEditor } from './views/WorkoutEditor';
@@ -30,6 +31,14 @@ export default function App() {
   const { data } = useStore();
   const [tab, setTab] = useState<Tab>('home');
   const [editor, setEditor] = useState<EditorState | null>(null);
+  const [programOpen, setProgramOpen] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 6000);
+    return () => clearTimeout(t);
+  }, [toast]);
   const [exerciseId, setExerciseId] = useState<string | null>(null);
 
   const go = (t: Tab) => {
@@ -44,12 +53,14 @@ export default function App() {
       if (!confirm('Sinulla on keskeneräinen treeni. Hylätäänkö se?')) return;
       clearDraft();
     }
+    setProgramOpen(false);
     setEditor({ workoutId, start, key: Date.now() });
     go('workouts');
   };
 
-  const closeEditor = () => {
+  const closeEditor = (message?: string) => {
     setEditor(null);
+    setToast(message ?? null);
     window.scrollTo(0, 0);
   };
 
@@ -88,13 +99,33 @@ export default function App() {
         {tab === 'workouts' &&
           (editor ? (
             <WorkoutEditor key={editor.key} workoutId={editor.workoutId} start={editor.start} onClose={closeEditor} />
+          ) : programOpen ? (
+            <ProgramEditor
+              onClose={() => {
+                setProgramOpen(false);
+                window.scrollTo(0, 0);
+              }}
+            />
           ) : (
-            <Workouts onOpen={(id) => openEditor(id)} onRepeat={(w) => openEditor(null, draftFromWorkout(w, data, true))} />
+            <Workouts
+              onOpen={(id) => openEditor(id)}
+              onRepeat={(w) => openEditor(null, draftFromWorkout(w, data, true))}
+              onOpenProgram={() => {
+                setProgramOpen(true);
+                window.scrollTo(0, 0);
+              }}
+            />
           ))}
         {tab === 'progress' && <Progress exerciseId={exerciseId} onSelectExercise={setExerciseId} />}
         {tab === 'weight' && <Weight />}
         {tab === 'data' && <DataView />}
       </main>
+
+      {toast && (
+        <div className="toast" role="status" onClick={() => setToast(null)}>
+          {toast}
+        </div>
+      )}
     </div>
   );
 }

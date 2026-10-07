@@ -1,12 +1,13 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import type { AppData, SetEntry, Workout } from './types';
+import { migrate } from './templates';
+import type { AppData, SetEntry, StoredData, Template, Workout } from './types';
 import { uid } from './utils';
 
 const KEY = 'jumppasovellus.data.v1';
 
-export const emptyData = (): AppData => ({ version: 1, exercises: [], workouts: [], bodyWeights: [] });
+export const emptyData = (): AppData => migrate({ version: 1, exercises: [], workouts: [], bodyWeights: [] });
 
-export function isAppData(x: unknown): x is AppData {
+export function isStoredData(x: unknown): x is StoredData {
   if (!x || typeof x !== 'object') return false;
   const d = x as Record<string, unknown>;
   return Array.isArray(d.exercises) && Array.isArray(d.workouts) && Array.isArray(d.bodyWeights);
@@ -17,7 +18,7 @@ function load(): AppData {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const parsed: unknown = JSON.parse(raw);
-      if (isAppData(parsed)) return parsed;
+      if (isStoredData(parsed)) return migrate(parsed);
     }
   } catch {
     // korruptoitunut tai estetty tallennus -> aloitetaan tyhjästä
@@ -31,6 +32,14 @@ export interface WorkoutInput {
   name: string;
   notes: string;
   exercises: { name: string; sets: SetEntry[] }[];
+  templateId?: string;
+}
+
+export interface TemplateInput {
+  /** null = uusi pohja */
+  id: string | null;
+  name: string;
+  exerciseNames: string[];
 }
 
 interface Store {
@@ -41,7 +50,9 @@ interface Store {
   deleteBodyWeight(id: string): void;
   /** Nimeää liikkeen uudelleen; jos nimi on jo toisella liikkeellä, liikkeet yhdistetään. */
   renameExercise(id: string, name: string): void;
-  replaceData(data: AppData): void;
+  saveTemplates(templates: TemplateInput[]): void;
+  /** Vanhemmat varmuuskopiot täydennetään nykyiseen muotoon. */
+  replaceData(data: StoredData): void;
 }
 
 const StoreContext = createContext<Store | null>(null);
@@ -77,6 +88,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             name: input.name.trim(),
             notes: input.notes.trim(),
             exercises: input.exercises.map((e) => ({ exerciseId: resolve(e.name), sets: e.sets })),
+            ...(input.templateId ? { templateId: input.templateId } : {}),
           };
           const workouts = input.id
             ? prev.workouts.map((w) => (w.id === input.id ? workout : w))
@@ -113,11 +125,33 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               ...w,
               exercises: w.exercises.map((e) => (e.exerciseId === id ? { ...e, exerciseId: target.id } : e)),
             })),
+            templates: prev.templates.map((t) => ({
+              ...t,
+              exerciseIds: [...new Set(t.exerciseIds.map((x) => (x === id ? target.id : x)))],
+            })),
           };
         });
       },
+      saveTemplates(input) {
+        setData((prev) => {
+          const exercises = [...prev.exercises];
+          const resolve = (name: string) => {
+            const found = exercises.find((e) => e.name.toLowerCase() === name.toLowerCase());
+            if (found) return found.id;
+            const created = { id: uid(), name };
+            exercises.push(created);
+            return created.id;
+          };
+          const templates: Template[] = input.map((t) => ({
+            id: t.id ?? uid(),
+            name: t.name.trim(),
+            exerciseIds: [...new Set(t.exerciseNames.map((n) => n.trim()).filter(Boolean).map(resolve))],
+          }));
+          return { ...prev, exercises, templates };
+        });
+      },
       replaceData(next) {
-        setData(next);
+        setData(migrate(next));
       },
     }),
     [data],

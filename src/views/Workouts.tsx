@@ -9,9 +9,10 @@ import { WEEKLY_TARGET } from '../templates';
 interface Props {
   onOpen: (workoutId: string | null) => void;
   onRepeat: (w: Workout) => void;
+  onOpenProgram: () => void;
 }
 
-export function Workouts({ onOpen, onRepeat }: Props) {
+export function Workouts({ onOpen, onRepeat, onOpenProgram }: Props) {
   const { data } = useStore();
   const draft = loadDraft();
   const workouts = [...data.workouts].sort((a, b) => b.date.localeCompare(a.date));
@@ -27,6 +28,18 @@ export function Workouts({ onOpen, onRepeat }: Props) {
           + Uusi treeni
         </button>
       </div>
+
+      <section className="card program-card">
+        <div>
+          <h2>Treeniohjelma</h2>
+          <p className="muted">
+            {data.templates.map((t) => `${t.name} (${t.exerciseIds.length} liikettä)`).join(' → ')}
+          </p>
+        </div>
+        <button type="button" className="btn ghost small" onClick={onOpenProgram}>
+          Muokkaa
+        </button>
+      </section>
 
       {draft && (
         <div className="card banner">

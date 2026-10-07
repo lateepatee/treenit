@@ -16,6 +16,8 @@ export interface Workout {
   name: string;
   notes: string;
   exercises: WorkoutExercise[];
+  /** Pohja, josta treeni aloitettiin; vuorottelu päätellään tästä */
+  templateId?: string;
 }
 
 export interface Exercise {
@@ -30,9 +32,20 @@ export interface BodyWeightEntry {
   weight: number;
 }
 
+/** Treenipohja, esim. Yläpäivä. Pohjat tehdään vuorotellen listan järjestyksessä. */
+export interface Template {
+  id: string;
+  name: string;
+  exerciseIds: string[];
+}
+
 export interface AppData {
   version: 1;
   exercises: Exercise[];
   workouts: Workout[];
   bodyWeights: BodyWeightEntry[];
+  templates: Template[];
 }
+
+/** Tallennettu muoto: vanhoista versioista ja varmuuskopioista puuttuu templates. */
+export type StoredData = Omit<AppData, 'templates'> & { templates?: Template[] };

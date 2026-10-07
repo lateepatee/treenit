@@ -12,32 +12,16 @@ import {
   type DraftSet,
 } from '../draft';
 import { useStore } from '../store';
-import type { AppData, SetEntry } from '../types';
-import { fmtDate, fmtNum, fmtSigned, numToInput, parseNum, summarizeSets, uid } from '../utils';
+import type { SetEntry } from '../types';
+import { ARROW, compareExercise, compareSet, countDirs, previousSession, progressText } from '../progress';
+import { fmtDate, fmtNum, numToInput, parseNum, summarizeSets, uid } from '../utils';
 
 interface Props {
   workoutId: string | null;
   /** Uuden treenin lähtötilanne (pohja tai vanha treeni) */
   start?: Draft;
-  onClose: () => void;
-}
-
-interface PreviousSession {
-  date: string;
-  sets: SetEntry[];
-}
-
-function previousSession(data: AppData, name: string, beforeOrOn: string, excludeId: string | null): PreviousSession | null {
-  const n = name.trim().toLowerCase();
-  const ex = n && data.exercises.find((e) => e.name.toLowerCase() === n);
-  if (!ex) return null;
-  let best: PreviousSession | null = null;
-  for (const w of data.workouts) {
-    if (w.id === excludeId || w.date > beforeOrOn) continue;
-    const sets = w.exercises.filter((e) => e.exerciseId === ex.id).flatMap((e) => e.sets);
-    if (sets.length && (!best || w.date > best.date)) best = { date: w.date, sets };
-  }
-  return best;
+  /** message: näytettävä yhteenveto tallennuksen jälkeen */
+  onClose: (message?: string) => void;
 }
 
 /** Sarjan tulos. Tyhjä paino tarkoittaa samaa kuin edellisellä kerralla (näkyy kentässä harmaana). */
@@ -47,26 +31,6 @@ function setResult(s: DraftSet, prev: SetEntry | undefined): SetEntry | null {
   const typed = parseNum(s.weight);
   return { weight: Math.max(0, typed ?? prev?.weight ?? 0), reps };
 }
-
-/** Vertailu edelliskertaan: painavampi paino tai samalla painolla enemmän toistoja on parannus. */
-function compareSet(cur: SetEntry, prev: SetEntry): { dir: 'up' | 'same' | 'down'; text: string } {
-  const dw = cur.weight - prev.weight;
-  if (Math.abs(dw) > 1e-9) return { dir: dw > 0 ? 'up' : 'down', text: `${fmtSigned(dw, 2)} kg` };
-  const dr = cur.reps - prev.reps;
-  return { dir: dr > 0 ? 'up' : dr < 0 ? 'down' : 'same', text: dr === 0 ? '=' : fmtSigned(dr, 0) };
-}
-
-/** Koko liikkeen vertailu: kovin paino, ja saman painon sarjoissa toistojen summa. */
-function compareExercise(pairs: { cur: SetEntry; prev: SetEntry }[]): { dir: 'up' | 'same' | 'down'; text: string } | null {
-  if (pairs.length === 0) return null;
-  const dw = Math.max(...pairs.map((p) => p.cur.weight)) - Math.max(...pairs.map((p) => p.prev.weight));
-  if (Math.abs(dw) > 1e-9) return { dir: dw > 0 ? 'up' : 'down', text: `${fmtSigned(dw, 2)} kg` };
-  const dr = pairs.reduce((a, p) => a + p.cur.reps - p.prev.reps, 0);
-  if (dr === 0) return { dir: 'same', text: 'samat toistot' };
-  return { dir: dr > 0 ? 'up' : 'down', text: `${fmtSigned(dr, 0)} ${Math.abs(dr) === 1 ? 'toisto' : 'toistoa'}` };
-}
-
-const ARROW = { up: '▲', same: '', down: '▼' } as const;
 
 export function WorkoutEditor({ workoutId, start, onClose }: Props) {
   const { data, saveWorkout, deleteWorkout } = useStore();
@@ -99,6 +63,15 @@ export function WorkoutEditor({ workoutId, start, onClose }: Props) {
   );
 
   const handleSave = () => {
+    const compared = draft.exercises.map((e) => {
+      const prev = previousSession(data, e.name, draft.date, draft.workoutId);
+      if (!prev) return null;
+      const pairs = e.sets.flatMap((s, i) => {
+        const cur = prev.sets[i] && setResult(s, prev.sets[i]);
+        return cur ? [{ cur, prev: prev.sets[i] }] : [];
+      });
+      return pairs.length ? compareExercise(pairs) : null;
+    });
     const exercises = draft.exercises
       .map((e) => {
         const prev = previousSession(data, e.name, draft.date, draft.workoutId);
@@ -117,9 +90,18 @@ export function WorkoutEditor({ workoutId, start, onClose }: Props) {
       alert('Lisää vähintään yksi liike ja sarja, jossa on toistot.');
       return;
     }
-    saveWorkout({ id: draft.workoutId, date: draft.date, name: draft.name, notes: draft.notes, exercises });
+    saveWorkout({
+      id: draft.workoutId,
+      date: draft.date,
+      name: draft.name,
+      notes: draft.notes,
+      exercises,
+      templateId: draft.templateId,
+    });
     clearDraft();
-    onClose();
+    const summary = progressText(countDirs(compared));
+    const title = draft.workoutId ? 'Muutokset tallennettu' : 'Treeni tallennettu';
+    onClose(summary ? `${title}. ${summary} 💪` : `${title} 💪`);
   };
 
   const handleCancel = () => {
