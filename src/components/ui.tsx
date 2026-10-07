@@ -33,8 +33,11 @@ export function Delta({
   const good = upIsGood !== null && rounded !== 0 && rounded > 0 === upIsGood;
   return (
     <span className={good ? 'delta delta-good' : 'delta'}>
-      {arrow && <span aria-hidden="true">{arrow} </span>}
-      {fmtSigned(value, decimals)} {unit}
+      <span className="nowrap">
+        {arrow && <span aria-hidden="true">{arrow} </span>}
+        {fmtSigned(value, decimals)}
+      </span>{' '}
+      <span className="delta-unit">{unit}</span>
     </span>
   );
 }

@@ -1,6 +1,6 @@
 :root {
   color-scheme: light;
-  --page: #f4f3ef;
+  --page: #f6f2ee;
   --surface: #fcfcfb;
   --surface-2: #efeee9;
   --ink: #0b0b0b;
@@ -9,11 +9,14 @@
   --grid: #e1e0d9;
   --axis: #c3c2b7;
   --border: rgba(11, 11, 11, 0.1);
-  --accent: #2a78d6;
-  --accent-strong: #256abf;
-  --accent-wash: rgba(42, 120, 214, 0.1);
+  /* Logon punaoranssi; sininen (hikipisara) jää kuvaajiin */
+  --accent: #c2361f;
+  --accent-strong: #c2302a;
+  --accent-wash: rgba(214, 70, 46, 0.1);
+  --brand-grad: linear-gradient(150deg, #f0603f 0%, #c2302a 100%);
+  --on-brand: #ffffff;
   --good: #006300;
-  --danger: #c23232;
+  --danger: #a3204a;
   --series-1: #2a78d6;
   --radius: 12px;
   --nav-h: 64px;
@@ -36,10 +39,12 @@
     --grid: #2c2c2a;
     --axis: #383835;
     --border: rgba(255, 255, 255, 0.1);
-    --accent: #3987e5;
-    --accent-wash: rgba(57, 135, 229, 0.16);
+    --accent: #f37a5f;
+    --accent-strong: #d23c2a;
+    --accent-wash: rgba(240, 96, 63, 0.16);
+    --brand-grad: linear-gradient(150deg, #e2553a 0%, #a8281f 100%);
     --good: #0ca30c;
-    --danger: #e66767;
+    --danger: #ec6f96;
     --series-1: #3987e5;
   }
 }
@@ -55,10 +60,12 @@
   --grid: #2c2c2a;
   --axis: #383835;
   --border: rgba(255, 255, 255, 0.1);
-  --accent: #3987e5;
-  --accent-wash: rgba(57, 135, 229, 0.16);
+  --accent: #f37a5f;
+  --accent-strong: #d23c2a;
+  --accent-wash: rgba(240, 96, 63, 0.16);
+  --brand-grad: linear-gradient(150deg, #e2553a 0%, #a8281f 100%);
   --good: #0ca30c;
-  --danger: #e66767;
+  --danger: #ec6f96;
   --series-1: #3987e5;
 }
 
@@ -192,6 +199,82 @@ p {
   }
 }
 
+.brand-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.brand-title img {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  flex: none;
+}
+
+.hero {
+  background: var(--brand-grad);
+  color: var(--on-brand);
+  border-radius: 16px;
+  padding: 18px 16px 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 6px 18px rgba(194, 48, 42, 0.25);
+}
+
+.hero-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.hero-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  opacity: 0.9;
+}
+
+.hero-title {
+  font-size: 1.75rem;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.hero-logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  flex: none;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35);
+}
+
+.hero-exercises {
+  margin: 10px 0 14px;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  opacity: 0.92;
+}
+
+.hero-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.btn.hero-primary {
+  background: #ffffff;
+  color: #b02a1c;
+  font-weight: 700;
+}
+
+.btn.hero-ghost {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.55);
+  color: #ffffff;
+}
+
 .view-header {
   display: flex;
   align-items: center;
@@ -275,8 +358,9 @@ p {
 }
 
 .btn.primary {
-  background: var(--accent-strong);
+  background: var(--brand-grad);
   color: #fff;
+  font-weight: 600;
 }
 
 .btn.primary:hover {
@@ -435,8 +519,9 @@ textarea:focus {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 12px 16px;
+  padding: 12px 14px;
   min-width: 0;
+  overflow: hidden;
 }
 
 .tile-label {
@@ -452,7 +537,23 @@ textarea:focus {
 }
 
 .tile-value .delta {
-  font-size: 1.25rem;
+  font-size: 1.125rem;
+}
+
+.tile-value .delta-unit {
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: var(--ink-2);
+}
+
+td .delta {
+  white-space: nowrap;
+}
+
+.cell-sub {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--ink-2);
 }
 
 .tile-unit {
@@ -499,6 +600,9 @@ textarea:focus {
 
 .delta {
   color: var(--ink-2);
+}
+
+.nowrap {
   white-space: nowrap;
 }
 
@@ -712,18 +816,6 @@ td .icon-btn {
 
 .welcome p:first-child {
   font-size: 1.0625rem;
-}
-
-.next-card {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.next-name {
-  font-size: 1.5rem;
-  font-weight: 700;
-  line-height: 1.2;
 }
 
 .welcome .row-gap {

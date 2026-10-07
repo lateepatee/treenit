@@ -83,7 +83,7 @@ export function Weight() {
                   `${thisWeek.count} punnitusta, ei vertailuviikkoa`
                 ) : (
                   <>
-                    <Delta value={thisWeek.change} unit="kg" /> edelliseen viikkoon
+                    <Delta value={thisWeek.change} unit="kg" /> ed. viikkoon
                   </>
                 )
               }
@@ -145,8 +145,8 @@ export function Weight() {
                   {visibleWeeks.map((w) => (
                     <tr key={w.week}>
                       <td>
-                        vko {isoWeek(w.week)}{' '}
-                        <span className="muted">
+                        vko {isoWeek(w.week)}
+                        <span className="cell-sub">
                           {fmtDate(w.week, { year: false })}–{fmtDate(addDays(w.week, 6), { year: false })}
                         </span>
                       </td>

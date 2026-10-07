@@ -3,7 +3,10 @@ import type { AppData } from './types';
 import { todayISO, uid } from './utils';
 
 export interface Template {
+  /** Treenin nimi tallennettaessa; vuorottelu tunnistaa pohjan tästä */
   name: string;
+  /** Napin teksti */
+  label: string;
   exercises: string[];
 }
 
@@ -11,6 +14,7 @@ export interface Template {
 export const TEMPLATES: Template[] = [
   {
     name: 'Ylä',
+    label: 'Yläpäivä',
     exercises: [
       'Vinopenkki smithissä',
       'Selkäliike laitteessa',
@@ -24,6 +28,7 @@ export const TEMPLATES: Template[] = [
   },
   {
     name: 'Ala',
+    label: 'Alapäivä',
     exercises: ['Hack-kyykky', 'RDL', 'Reidenojennus', 'Reidenkoukistus', 'Vatsat', 'Pohkeet'],
   },
 ];

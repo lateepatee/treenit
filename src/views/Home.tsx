@@ -26,19 +26,24 @@ export function Home({ onNewWorkout, onOpenWorkout, onOpenExercise, onGo }: Prop
   const next = nextTemplate(data);
 
   const startCard = (
-    <section className="card next-card">
-      <div>
-        <div className="tile-label">Seuraavaksi vuorossa</div>
-        <div className="next-name">{next.name}</div>
-        <div className="muted">{next.exercises.join(' · ')}</div>
+    <section className="hero">
+      <div className="hero-head">
+        <div>
+          <div className="hero-label">Seuraavaksi vuorossa</div>
+          <div className="hero-title">{next.label}</div>
+        </div>
+        <img className="hero-logo" src="icon.svg" alt="" />
       </div>
-      <div className="row-gap wrap">
-        <button type="button" className="btn primary" onClick={() => onNewWorkout(draftFromTemplate(next))}>
-          Aloita {next.name}
-        </button>
-        {TEMPLATES.filter((t) => t !== next).map((t) => (
-          <button key={t.name} type="button" className="btn ghost" onClick={() => onNewWorkout(draftFromTemplate(t))}>
-            {t.name} sittenkin
+      <p className="hero-exercises">{next.exercises.join(' · ')}</p>
+      <div className="hero-buttons">
+        {TEMPLATES.map((t) => (
+          <button
+            key={t.name}
+            type="button"
+            className={t === next ? 'btn hero-primary' : 'btn hero-ghost'}
+            onClick={() => onNewWorkout(draftFromTemplate(t))}
+          >
+            {t.label}
           </button>
         ))}
       </div>
@@ -49,7 +54,10 @@ export function Home({ onNewWorkout, onOpenWorkout, onOpenExercise, onGo }: Prop
     return (
       <div>
         <div className="view-header">
-          <h1>Treenipäiväkirja</h1>
+          <h1 className="brand-title">
+          <img src="icon.svg" alt="" />
+          Treenipäiväkirja
+        </h1>
         </div>
         {startCard}
         <div className="card welcome">
@@ -88,7 +96,10 @@ export function Home({ onNewWorkout, onOpenWorkout, onOpenExercise, onGo }: Prop
   return (
     <div>
       <div className="view-header">
-        <h1>Treenipäiväkirja</h1>
+        <h1 className="brand-title">
+          <img src="icon.svg" alt="" />
+          Treenipäiväkirja
+        </h1>
         <button type="button" className="btn ghost" onClick={() => onNewWorkout()}>
           + Tyhjä treeni
         </button>
