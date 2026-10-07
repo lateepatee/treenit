@@ -986,6 +986,117 @@ td .icon-btn {
   }
 }
 
+.editor {
+  /* tilaa palautusajastimelle näytön alareunassa */
+  padding-bottom: 64px;
+}
+
+.exercise-done {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.done-check {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--good);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.done-name {
+  font-weight: 600;
+}
+
+.done-sets {
+  color: var(--ink-2);
+  font-size: 0.875rem;
+}
+
+.exercise-done .cmp {
+  margin-left: auto;
+  font-size: 0.8125rem;
+}
+
+.rest-timer {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 8px);
+  transform: translateX(-50%);
+  z-index: 15;
+  width: min(440px, calc(100vw - 24px));
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 8px 8px 16px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #262624;
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.rest-bar {
+  position: absolute;
+  inset: 0;
+  background: var(--brand-grad);
+  transform-origin: left;
+  transition: transform 0.25s linear;
+}
+
+.rest-timer.done .rest-bar {
+  background: var(--good);
+}
+
+.rest-text,
+.rest-btn {
+  position: relative;
+}
+
+.rest-text {
+  flex: 1;
+  font-size: 1rem;
+  color: #fff;
+}
+
+.rest-text strong {
+  font-size: 1.25rem;
+}
+
+.rest-sub {
+  font-size: 0.875rem;
+  opacity: 0.9;
+}
+
+.rest-btn {
+  min-width: 44px;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@media (min-width: 760px) {
+  .rest-timer {
+    bottom: 24px;
+  }
+}
+
 .editor-footer {
   display: flex;
   gap: 8px;

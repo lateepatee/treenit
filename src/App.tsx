@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { RestTimer } from './components/RestTimer';
 import { clearDraft, draftFromWorkout, loadDraft, type Draft } from './draft';
 import { useStore } from './store';
 import { DataView } from './views/DataView';
@@ -29,8 +30,12 @@ interface EditorState {
 
 export default function App() {
   const { data } = useStore();
-  const [tab, setTab] = useState<Tab>('home');
-  const [editor, setEditor] = useState<EditorState | null>(null);
+  // iPhone voi käynnistää taustalla olleen appin uudelleen; keskeneräiseen treeniin palataan suoraan.
+  const [resumed] = useState(() => loadDraft());
+  const [tab, setTab] = useState<Tab>(resumed ? 'workouts' : 'home');
+  const [editor, setEditor] = useState<EditorState | null>(
+    resumed ? { workoutId: resumed.workoutId, key: Date.now() } : null,
+  );
   const [programOpen, setProgramOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -120,6 +125,8 @@ export default function App() {
         {tab === 'weight' && <Weight />}
         {tab === 'data' && <DataView />}
       </main>
+
+      <RestTimer />
 
       {toast && (
         <div className="toast" role="status" onClick={() => setToast(null)}>

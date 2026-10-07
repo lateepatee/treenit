@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type FocusEvent } from 'react';
 import {
   clearDraft,
   draftFromWorkout,
@@ -14,6 +14,7 @@ import {
 import { useStore } from '../store';
 import type { SetEntry } from '../types';
 import { ARROW, compareExercise, compareSet, countDirs, previousSession, progressText } from '../progress';
+import { startRest, stopRest } from '../restTimer';
 import { fmtDate, fmtNum, numToInput, parseNum, summarizeSets, uid } from '../utils';
 
 interface Props {
@@ -44,6 +45,18 @@ export function WorkoutEditor({ workoutId, start, onClose }: Props) {
   });
   const [draft, setDraft] = useState<Draft>(init.draft);
   const [dirty, setDirty] = useState(init.dirty);
+  // Tehdyt liikkeet tiivistetään yhdelle riville, jotta seuraava liike on näkyvissä.
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
+  // iPhonessa napin napautus ei siirrä fokusta, joten blur-tapahtumasta ei näe, napautettiinko saman liikkeen
+  // nappia (esim. "+ Sarja"). Siksi muistetaan, missä liikkeessä viimeksi koskettiin.
+  const lastPointer = useRef<{ id: string; t: number } | null>(null);
+  const setCollapsedFor = (id: string, value: boolean) =>
+    setCollapsed((c) => {
+      const next = new Set(c);
+      if (value) next.add(id);
+      else next.delete(id);
+      return next;
+    });
 
   // Keskeneräinen treeni säilyy, vaikka selain suljettaisiin kesken salikäynnin.
   useEffect(() => {
@@ -99,6 +112,7 @@ export function WorkoutEditor({ workoutId, start, onClose }: Props) {
       templateId: draft.templateId,
     });
     clearDraft();
+    stopRest();
     const summary = progressText(countDirs(compared));
     const title = draft.workoutId ? 'Muutokset tallennettu' : 'Treeni tallennettu';
     onClose(summary ? `${title}. ${summary} 💪` : `${title} 💪`);
@@ -164,8 +178,50 @@ export function WorkoutEditor({ workoutId, start, onClose }: Props) {
             })
           : [];
         const total = compareExercise(pairs);
+        const complete = ex.name.trim() !== '' && ex.sets.length > 0 && ex.sets.every((s) => parseNum(s.reps));
+
+        if (collapsed.has(ex.id)) {
+          const results = ex.sets
+            .map((s, i) => setResult(s, prev?.sets[i]))
+            .filter((s): s is SetEntry => s !== null);
+          return (
+            <button
+              key={ex.id}
+              type="button"
+              className="card exercise-done"
+              aria-label={`${ex.name}, valmis. Avaa muokattavaksi.`}
+              onClick={() => setCollapsedFor(ex.id, false)}
+            >
+              <span className="done-check" aria-hidden="true">
+                ✓
+              </span>
+              <span className="done-name">{ex.name}</span>
+              <span className="done-sets num">{summarizeSets(results)}</span>
+              {total && (
+                <span className={`cmp cmp-${total.dir}`}>
+                  {ARROW[total.dir] && <span aria-hidden="true">{ARROW[total.dir]} </span>}
+                  {total.text}
+                </span>
+              )}
+            </button>
+          );
+        }
+
+        // Kun fokus lähtee valmiista liikkeestä (esim. näppäimistö suljetaan), liike tiivistetään.
+        const handleBlur = (e: FocusEvent<HTMLDivElement>) => {
+          if (!complete || e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+          const p = lastPointer.current;
+          if (p && p.id === ex.id && Date.now() - p.t < 600) return;
+          setCollapsedFor(ex.id, true);
+        };
+
         return (
-          <div key={ex.id} className="card exercise-card">
+          <div
+            key={ex.id}
+            className="card exercise-card"
+            onBlur={handleBlur}
+            onPointerDownCapture={() => (lastPointer.current = { id: ex.id, t: Date.now() })}
+          >
             <div className="exercise-head">
               <input
                 className="exercise-name"
@@ -253,12 +309,14 @@ export function WorkoutEditor({ workoutId, start, onClose }: Props) {
                       placeholder={p ? String(p.reps) : '–'}
                       aria-label={`Sarja ${i + 1} toistot`}
                       value={s.reps}
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        // Uuden treenin sarjan kirjaus käynnistää palautuksen.
+                        if (!draft.workoutId && !s.reps && e.target.value) startRest();
                         updateExercise(ex.id, (x) => ({
                           ...x,
                           sets: x.sets.map((y) => (y.id === s.id ? { ...y, reps: e.target.value } : y)),
-                        }))
-                      }
+                        }));
+                      }}
                     />
                     <span
                       className={cmp ? `cmp cmp-${cmp.dir}` : 'cmp'}
